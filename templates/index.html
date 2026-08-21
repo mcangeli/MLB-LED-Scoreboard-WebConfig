@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLB Scoreboard Dashboard</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/theme/dracula.min.css">
+    <style>
+        body { background-color: #0f172a; color: #e2e8f0; font-family: system-ui, -apple-system, sans-serif; }
+        .navbar { background-color: #1e293b; border-bottom: 1px solid #334155; }
+        .card { background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; }
+        .nav-tabs .nav-link { color: #94a3b8; border: none; font-weight: 500; }
+        .nav-tabs .nav-link.active { color: #38bdf8; background: transparent; border-bottom: 2px solid #38bdf8; }
+        .CodeMirror { height: 560px; border-radius: 8px; font-size: 14px; }
+        .list-group-item { background-color: #0f172a; border-color: #334155; color: #e2e8f0; }
+        .list-group-item:hover { background-color: #1e293b; }
+        .form-control, .form-select { background-color: #0f172a; border-color: #334155; color: #fff; }
+        .form-control:focus, .form-select:focus { background-color: #0f172a; color: #fff; border-color: #38bdf8; }
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg px-4 py-3 mb-4">
+    <div class="container-fluid d-flex justify-content-between align-items-center">
+        <span class="navbar-brand text-white fw-bold mb-0">⚾ MLB LED Scoreboard Controller</span>
+        <button id="restartServiceBtn" class="btn btn-outline-warning btn-sm fw-semibold">
+            ⚡ Restart Scoreboard Service
+        </button>
+    </div>
+</nav>
+
+<div class="container">
+    <div id="alertBox" class="alert d-none" role="alert"></div>
+
+    <ul class="nav nav-tabs mb-4" id="mainTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="config-tab" data-bs-toggle="tab" data-bs-target="#config-pane" type="button">⚙️ File Config Editor</button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="wifi-tab" data-bs-toggle="tab" data-bs-target="#wifi-pane" type="button">📶 Wi-Fi Settings</button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="mainTabContent">
+        <!-- Tab 1: Config Editor -->
+        <div class="tab-pane fade show active" id="config-pane" role="tabpanel">
+            <div class="card p-4">
+                <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <label for="fileSelect" class="form-label mb-0 fw-semibold text-white">Target File:</label>
+                        <select id="fileSelect" class="form-select form-select-sm w-auto">
+                            {% for key in file_keys %}
+                            <option value="{{ key }}">{{ key }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <button id="formatBtn" class="btn btn-outline-light btn-sm me-2">Format JSON</button>
+                        <button id="saveBtn" class="btn btn-primary btn-sm px-3">Save Changes</button>
+                    </div>
+                </div>
+                <textarea id="configTextarea"></textarea>
+            </div>
+        </div>
+
+        <!-- Tab 2: Wi-Fi Manager -->
+        <div class="tab-pane fade" id="wifi-pane" role="tabpanel">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="card p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h5 class="mb-0 text-white">Available Networks</h5>
+                            <button id="scanBtn" class="btn btn-outline-info btn-sm">🔄 Scan</button>
+                        </div>
+                        <div id="wifiList" class="list-group overflow-auto" style="max-height: 380px;">
+                            <div class="text-muted p-2">Click "Scan" to find networks...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <div class="card p-4 h-100">
+                        <h5 class="mb-3 text-white">Connect to Network</h5>
+                        <form id="wifiForm">
+                            <div class="mb-3">
+                                <label class="form-label text-muted">Network Name (SSID)</label>
+                                <input type="text" class="form-control" id="ssidInput" placeholder="Enter or select SSID" required>
+                            </div>
+                            <div class="mb-4">
+                                <label class="form-label text-muted">Password</label>
+                                <input type="password" class="form-control" id="pwdInput" placeholder="Leave empty if open network">
+                            </div>
+                            <button type="submit" id="connectBtn" class="btn btn-info w-100 text-white fw-semibold">Connect</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+
+<script>
+    const alertBox = document.getElementById('alertBox');
+    function notify(type, msg) {
+        alertBox.className = `alert alert-${type}`;
+        alertBox.textContent = msg;
+        alertBox.classList.remove('d-none');
+        setTimeout(() => alertBox.classList.add('d-none'), 6000);
+    }
+
+    // Initialize CodeMirror
+    const initialData = {{ initial_data|tojson }};
+    const editor = CodeMirror.fromTextArea(document.getElementById('configTextarea'), {
+        mode: "application/json",
+        theme: "dracula",
+        lineNumbers: true,
+        tabSize: 2
+    });
+    editor.setValue(JSON.stringify(initialData, null, 2));
+
+    const fileSelect = document.getElementById('fileSelect');
+
+    // Switch between files
+    fileSelect.onchange = () => {
+        const selected = fileSelect.value;
+        fetch(`/api/config/load?file=${encodeURIComponent(selected)}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    editor.setValue(JSON.stringify(data.data, null, 2));
+                } else {
+                    notify('danger', data.message || 'Failed to load file.');
+                }
+            })
+            .catch(err => notify('danger', 'Failed to retrieve file contents.'));
+    };
+
+    // Format JSON
+    document.getElementById('formatBtn').onclick = () => {
+        try {
+            const parsed = JSON.parse(editor.getValue());
+            editor.setValue(JSON.stringify(parsed, null, 2));
+        } catch (e) {
+            notify('danger', `Invalid JSON: ${e.message}`);
+        }
+    };
+
+    // Save JSON
+    document.getElementById('saveBtn').onclick = () => {
+        try {
+            const payload = JSON.parse(editor.getValue());
+            const selectedFile = fileSelect.value;
+
+            fetch('/api/config/save', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    file: selectedFile,
+                    data: payload
+                })
+            })
+            .then(res => res.json())
+            .then(data => notify(data.status === 'success' ? 'success' : 'danger', data.message));
+        } catch (e) {
+            notify('danger', `Invalid JSON syntax: ${e.message}`);
+        }
+    };
+
+    // Restart Service Handling
+    const restartServiceBtn = document.getElementById('restartServiceBtn');
+    restartServiceBtn.onclick = () => {
+        if (!confirm('Are you sure you want to restart the scoreboard service?')) return;
+        restartServiceBtn.disabled = true;
+        restartServiceBtn.textContent = 'Restarting...';
+
+        fetch('/api/service/restart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(res => res.json())
+        .then(data => {
+            restartServiceBtn.disabled = false;
+            restartServiceBtn.textContent = '⚡ Restart Scoreboard Service';
+            notify(data.status === 'success' ? 'success' : 'danger', data.message);
+        })
+        .catch(() => {
+            restartServiceBtn.disabled = false;
+            restartServiceBtn.textContent = '⚡ Restart Scoreboard Service';
+            notify('danger', 'Failed to issue restart command.');
+        });
+    };
+
+    // Wi-Fi Handling
+    const scanBtn = document.getElementById('scanBtn');
+    const wifiList = document.getElementById('wifiList');
+    const ssidInput = document.getElementById('ssidInput');
+
+    scanBtn.onclick = () => {
+        scanBtn.disabled = true;
+        scanBtn.textContent = 'Scanning...';
+        wifiList.innerHTML = '<div class="text-muted p-2">Scanning for Wi-Fi networks...</div>';
+
+        fetch('/api/wifi/scan')
+            .then(res => res.json())
+            .then(data => {
+                scanBtn.disabled = false;
+                scanBtn.textContent = '🔄 Scan';
+                wifiList.innerHTML = '';
+
+                if (data.networks && data.networks.length > 0) {
+                    data.networks.forEach(net => {
+                        const item = document.createElement('a');
+                        item.className = 'list-group-item list-group-item-action d-flex justify-content-between align-items-center';
+                        item.href = '#';
+                        item.innerHTML = `<span><strong>${net.ssid}</strong> <small class="text-muted">(${net.security})</small></span><span class="badge bg-secondary">${net.signal}%</span>`;
+                        item.onclick = (e) => {
+                            e.preventDefault();
+                            ssidInput.value = net.ssid;
+                            document.getElementById('pwdInput').focus();
+                        };
+                        wifiList.appendChild(item);
+                    });
+                } else {
+                    wifiList.innerHTML = '<div class="text-muted p-2">No networks found.</div>';
+                }
+            })
+            .catch(() => {
+                scanBtn.disabled = false;
+                scanBtn.textContent = '🔄 Scan';
+                notify('danger', 'Failed to scan for Wi-Fi networks.');
+            });
+    };
+
+    document.getElementById('wifiForm').onsubmit = (e) => {
+        e.preventDefault();
+        const connectBtn = document.getElementById('connectBtn');
+        connectBtn.disabled = true;
+        connectBtn.textContent = 'Connecting...';
+
+        fetch('/api/wifi/connect', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ssid: ssidInput.value,
+                password: document.getElementById('pwdInput').value
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            connectBtn.disabled = false;
+            connectBtn.textContent = 'Connect';
+            notify(data.status === 'success' ? 'success' : 'danger', data.message);
+        })
+        .catch(() => {
+            connectBtn.disabled = false;
+            connectBtn.textContent = 'Connect';
+            notify('danger', 'Failed to issue Wi-Fi connection request.');
+        });
+    };
+</script>
+</body>
+</html>
