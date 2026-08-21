@@ -18,7 +18,7 @@ sudo venv/bin/pip3 install flask
 ```
 Once Flask is installed:
 ```
-git clone <insertgit link here>
+git clone https://github.com/mcangeli/MLB-LED-Scoreboard-WebConfig.git
 mv MLB-LED-Scoreboard-WebConfig webconfig
 ```
 to run:
