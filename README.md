@@ -14,10 +14,6 @@ This configurator *DOES NOT* have any authentication required, only use this on 
 # To install:
 ```
 cd mlb-led-scoreboard
-sudo venv/bin/pip3 install flask
-```
-Once Flask is installed:
-```
 git clone https://github.com/mcangeli/MLB-LED-Scoreboard-WebConfig.git
 mv MLB-LED-Scoreboard-WebConfig webconfig
 ```
