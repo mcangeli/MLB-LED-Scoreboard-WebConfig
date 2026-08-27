@@ -30,32 +30,13 @@ When running, the configurator can be accessed via webbrowser at http://<ip-addr
 To create a systemctl start up script...
 
 ```
-sudo nano /lib/systemd/system/mlb-webconfig.service
+nano scripts/mlb-webconfig.service
 ```
+Edit the Script to change HOMEDIR to YOUR home directory.
 
-Paste in to the file:
+Save the file and then copy it to the system folder and enable it.
 ```
-  [Unit]
-  Description=MLB LED Scoreboard WebConfig
-  Wants=network-online.target time-sync.target
-  After=network.target network-online.target time-sync.target
-
-  [Service]
-  Environment=""
-  WorkingDirectory=/home/HOMEDIR/mlb-led-scoreboard
-  ExecStartPre=/bin/sleep 15
-  ExecStart=/home/HOMEDIR/mlb-led-scoreboard/venv/bin/python /home/HOMEDIR/mlb-led-scoreboard/webconfig/config_editor.py $SCOREBOARD_ARGS
-  Restart=always
-  RestartSec=2
-
-  [Install]
-  WantedBy=multi-user.target
-```
-
-Change HOMEDIR to the user that you have the mlb-scoreboard setup under.
-
-Then run:
-```
+$ sudo cp scripts/mlb-webconfig.service /lib/systemd/system/
 $  sudo systemctl enable mlb-webconfig.service
 ```
 
@@ -65,5 +46,5 @@ You can run:
 sudo systemctl start mlb-webconfig.service
 ```
 to run it and test it.
-The webconfig is available at http://scoreboard-IP-Address:5000/
+The webconfig is available at http://<scoreboard-IP-Address>:5000/
 
