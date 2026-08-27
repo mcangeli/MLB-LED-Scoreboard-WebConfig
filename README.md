@@ -22,7 +22,7 @@ to run:
 sudo venv/bin/python3 webconfig/config_editor.py
 ```
 
-When running, the configurator can be accessed via webbrowser at http://<ip-address>:5000
+When running, the configurator can be accessed via webbrowser at http://scoreboardip-address:5000
 (I start a screen session and run it in screen so I can disconnect from the pi)
 
 # Optional Startup Script
