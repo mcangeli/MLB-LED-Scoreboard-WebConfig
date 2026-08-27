@@ -46,5 +46,5 @@ You can run:
 sudo systemctl start mlb-webconfig.service
 ```
 to run it and test it.
-The webconfig is available at http://<scoreboard-IP-Address>:5000/
+The webconfig is available at http://scoreboard-IP-Address:5000/
 
