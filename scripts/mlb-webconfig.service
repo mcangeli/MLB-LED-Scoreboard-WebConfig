@@ -1,0 +1,15 @@
+  [Unit]
+  Description=MLB LED Scoreboard WebConfig
+  Wants=network-online.target time-sync.target
+  After=network.target network-online.target time-sync.target
+
+  [Service]
+  Environment=""
+  WorkingDirectory=/home/HOMEDIR/mlb-led-scoreboard
+  ExecStartPre=/bin/sleep 15
+  ExecStart=/home/HOMEDIR/mlb-led-scoreboard/venv/bin/python /home/HOMEDIR/mlb-led-scoreboard/webconfig/config_editor.py $SCOREBOARD_ARGS
+  Restart=always
+  RestartSec=2
+
+  [Install]
+  WantedBy=multi-user.target
